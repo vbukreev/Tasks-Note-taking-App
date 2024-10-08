@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Task List</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Advent+Pro:ital,wght@0,100..900;1,100..900&family=Anta&family=Bebas+Neue&family=Cinzel:wght@400..900&family=Exo+2:ital,wght@0,100..900;1,100..900&family=Fredericka+the+Great&family=Montserrat+Subrayada:wght@400;700&family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Orbitron:wght@400..900&family=Press+Start+2P&family=Quicksand:wght@300..700&family=Rajdhani:wght@300;400;500;600;700&family=Rock+3D&family=Syncopate:wght@400;700&family=Tenor+Sans&family=Yanone+Kaffeesatz:wght@200..700&family=Zeyada&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.min.js"></script>
+    <style>
+      body {
+          font-family: "Quicksand", sans-serif;
+          background-image: url('path-to-floral-background.jpg');
+          background-size: cover;
+          color: #333;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          min-height: 100vh;
+          margin: 0;
+      }
+  
+      h1, h2 {
+          font-family: "Cinzel", serif;
+          text-align: center;
+      }
+  
+      .link-container {
+          margin-bottom: 20px;
+      }
+  
+      .link-container a {
+          margin-right: 10px;
+      }
+  
+      .progress-container, #task-list {
+          width: 90%;
+          max-width: 1000px; /* Ensure parent container is wide enough */
+          margin-bottom: 20px;
+      }
+  
+      .progress-container {
+          width: 100%;
+          background-color: #e0e0e0;
+          border-radius: 5px;
+          overflow: hidden;
+      }
+  
+      .progress-bar {
+          height: 20px;
+          background-color: #76c7c0;
+          transition: width 0.3s ease-in-out;
+      }
+  
+      .taskContainer {
+          background-color: rgba(255, 255, 255, 0.8);
+          border-radius: 10px;
+          padding: 15px;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          display: flex;
+          align-items: center;
+          justify-content: space-between; 
+      }
+  
+      .taskContainer span {
+          flex-grow: 1; 
+          margin-right: 10px; 
+      }
+  
+      form.inline-form {
+          display: flex;
+          align-items: center;
+      }
+  
+      form.inline-form input[type="text"] {
+          flex-grow: 1;
+          margin-right: 10px; 
+      }
+  
+      .delete-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 1.5em;
+        margin-left: 10px; 
+        flex-shrink: 0; 
+      }
+  
+      .swipe-away {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+  
+      .completed-task {
+        text-decoration: line-through; 
+      }
+  
+      form.clear-form {
+        margin-top: 20px; 
+      }
+  </style>
+
+</head>
+<body>
+  <h1>To-Do List</h1>
+
+  <div class="link-container">
+    <a href="/">All Tasks</a> | <a href="/completed-tasks">Completed Tasks</a>
+  </div>
+
+  <div class="progress-container">
+    <div class="progress-bar" style="width: <%= progress %>%;"></div>
+  </div>
+
+  <h2>Search Tasks</h2>
+  <form method="GET" action="/search-tasks" class="inline-form">
+      <input type="text" name="query" placeholder="Search..." />
+      <button>Search</button>
+  </form>
+
+  <% if (tasks.length === 0) { %>
+    <p>No tasks found.</p>
+  <% } else { %>
+    <div id="task-list">
+      <% for(let i = 0; i < tasks.length; i++) { %>
+          <div class="taskContainer" data-id="<%= tasks[i].id %>">
+              <span><%= tasks[i].id %></span>
+              <span class="<%= tasks[i].isComplete ? 'completed-task' : '' %>"><%= tasks[i].name %></span>
+  
+              <form method="POST" action="/update-task/<%= tasks[i].id %>">
+                  <input type="checkbox" name="isComplete" <%=tasks[i].isComplete ? 'checked' : '' %> />
+                  <button>Update</button>
+              </form>
+  
+              <!-- Delete Button -->
+              <button class="delete-btn" onclick="deleteTask(<%= tasks[i].id %>)">
+                  🗑️
+              </button>
+          </div>
+      <% } %>
+  </div>
+  <% } %>
+
+  <!-- Add Task Form -->
+  <h2>Add Task</h2>
+  <form method="POST" action="/add-task" class="inline-form">
+    <input type="text" name="name" required placeholder="New task..." />
+    <button>Add</button>
+  </form>
+
+  <!-- Clear All Tasks Button -->
+  <form method="POST" action="/clear-tasks" class="clear-form">
+    <button type="submit">Clear All Tasks</button>
+</form>
+
+<!--XML to initialize sortable list -->
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+      const taskList = document.getElementById('task-list');
+      Sortable.create(taskList, {
+          animation: 150,
+          onEnd: function (evt) {
+              // Handle reordering logic here if needed
+              console.log(`Moved item from ${evt.oldIndex} to ${evt.newIndex}`);
+          }
+      });
+  });
+</script>
+
+<script>
+  function deleteTask(taskId) {
+      const taskElement = document.querySelector(`.taskContainer[data-id='${taskId}']`);
+      
+      //swipe-away animation
+      taskElement.classList.add('swipe-away');
+      
+      // Wait for the animation to finish
+      setTimeout(() => {
+          // send a request to delete the task from the server
+          fetch(`/delete-task/${taskId}`, { method: 'POST' })
+              .then(response => response.json())
+              .then(data => {
+                  if (data.success) {
+                      taskElement.remove();
+                  }
+              });
+      }, 300); // Match duration with CSS
+  }
+</script>
+
+
+</body>
+</html>
